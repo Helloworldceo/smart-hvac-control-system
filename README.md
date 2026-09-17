@@ -1,69 +1,129 @@
 # Smart HVAC / Room Temperature Control System
 
-Progressive learning project: building a complete control system from absolute fundamentals to PID control, disturbances, visualization, and professional packaging.
+Complete implementation of a room temperature control system built from first principles.
 
-This repository is being built **stage by stage** together with a tutor. Code is added only after the concepts are understood.
+This project covers the full progression:
 
-## Learning Philosophy
+1. Fundamentals of control systems
+2. ON/OFF controller
+3. First-order mathematical model of a room
+4. Proportional (P) control
+5. PI and PID control (implemented from scratch)
+6. Disturbances and robustness testing
+7. Performance metrics and comparison
+8. Visualization and clean packaging
 
-- Theory → Simple example → Implementation → Experiment → Visualization → Improvement → Advanced concept
-- Build everything from scratch first
-- Mathematics is always explained with intuition, variable meanings, and numerical examples
-- Prefer understanding over black-box libraries
+## Features
 
-## Project Stages
+- Physics-based room thermal model (first-order lag)
+- Controllers implemented from scratch: ON/OFF, P, PI, PID
+- Realistic disturbances (outdoor temperature variation, door openings, occupancy)
+- Performance metrics: rise time, overshoot, settling time, steady-state error, energy consumption
+- Side-by-side comparison of all controllers
+- Clean modular architecture
+- Ready for extension to MPC or RL later
 
-| Stage | Topic                              | Status      |
-|-------|------------------------------------|-------------|
-| 1     | Fundamentals of Control Systems    | In progress |
-| 2     | ON/OFF Controller                  | Pending     |
-| 3     | Mathematical Model of the Room     | Pending     |
-| 4     | Proportional (P) Control           | Pending     |
-| 5     | PI and PID Control                 | Pending     |
-| 6     | Disturbances & Robustness          | Pending     |
-| 7     | Visualization / Dashboard          | Pending     |
-| 8     | Final Professional Packaging       | Pending     |
+## Quick Start
 
-## Repository Structure (will grow)
+```bash
+git clone https://github.com/Helloworldceo/smart-hvac-control-system.git
+cd smart-hvac-control-system
+python -m venv .venv
+source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
 
-```
-smart-hvac-control-system/
-├── README.md
-├── requirements.txt
-├── docs/
-│   ├── 01_fundamentals.md
-│   └── ...
-├── src/
-│   ├── stage1_fundamentals/
-│   ├── stage2_on_off/
-│   ├── stage3_model/
-│   ├── stage4_p_control/
-│   ├── stage5_pid/
-│   ├── stage6_disturbances/
-│   └── stage7_visualization/
-├── experiments/
-├── notebooks/
-└── results/
+# Run the full comparison
+python -m src.main
 ```
 
-## Current Focus
+Plots and metrics will be saved in `results/`.
 
-**Stage 1 — Fundamentals**
+## Project Structure
 
-We are currently learning:
-- What is a control system?
-- Plant, sensor, actuator, controller
-- Open-loop vs closed-loop
-- Setpoint, error, feedback
-- Simple Python simulation of the idea
+```
+src/
+├── plant.py              # Room thermal model
+├── controllers/
+│   ├── base.py
+│   ├── on_off.py
+│   ├── proportional.py
+│   ├── pi.py
+│   └── pid.py
+├── simulation.py         # Simulation engine + disturbances
+├── metrics.py            # Rise time, overshoot, settling, SSE, energy
+├── plotting.py           # Visualization helpers
+└── main.py               # Run all experiments
 
-## How to follow along
+docs/
+├── mathematical_model.md
+├── controllers.md
+└── results_interpretation.md
 
-1. Clone the repository
-2. Create a virtual environment
-3. Install requirements (will be updated per stage)
-4. Work through the code in `src/stageX_...` in order
+experiments/
+results/
+```
+
+## Mathematical Model (Room)
+
+We use a simple but realistic first-order model:
+
+```
+C * dT/dt = (T_out - T)/R + P_heater + P_disturbance
+```
+
+Where:
+- `T` = room temperature (°C)
+- `T_out` = outdoor temperature (°C)
+- `R` = thermal resistance (°C/W)
+- `C` = thermal capacitance (J/°C)
+- `P_heater` = heater power (W)
+- `P_disturbance` = additional heat gains/losses
+
+This is discretized with a fixed time step for simulation.
+
+## Controllers
+
+### ON/OFF
+Classic bang-bang with hysteresis option.
+
+### Proportional (P)
+```
+u(t) = Kp * e(t)
+```
+
+### PI
+```
+u(t) = Kp * e(t) + Ki * ∫e(τ)dτ
+```
+
+### PID (from scratch)
+```
+u(t) = Kp * e(t) + Ki * ∫e(τ)dτ + Kd * de/dt
+```
+
+Anti-windup and derivative filtering are included in the PID implementation.
+
+## Performance Metrics
+
+For every controller we compute:
+
+- Rise time (10% → 90%)
+- Overshoot (%)
+- Settling time (±2% band)
+- Steady-state error
+- Total energy consumed by the heater
+
+## Example Results
+
+After running `python -m src.main` you will see comparison plots and a metrics table in the terminal and in `results/`.
+
+## Requirements
+
+- Python ≥ 3.10
+- numpy
+- matplotlib
+- pandas (optional, for nice tables)
 
 ## License
 
-MIT (or change later)
+MIT

@@ -35,9 +35,8 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
-# Results / plots (we will decide later what to track)
+# Results (keep folder, ignore generated images if desired)
 # results/*.png
-# results/*.csv
 
 # Streamlit
 .streamlit/
