@@ -1,0 +1,9 @@
+# Stage 1 needs almost nothing
+# Later stages will add:
+# numpy
+# matplotlib
+# scipy
+# streamlit
+# etc.
+
+# Keep this file updated as we progress
