@@ -1,27 +1,19 @@
 # Smart HVAC / Room Temperature Control System
 
-Complete implementation of a room temperature control system built from first principles.
+Professional implementation of a room temperature control system built from first principles.
 
-This project covers the full progression:
-
-1. Fundamentals of control systems
-2. ON/OFF controller
-3. First-order mathematical model of a room
-4. Proportional (P) control
-5. PI and PID control (implemented from scratch)
-6. Disturbances and robustness testing
-7. Performance metrics and comparison
-8. Visualization and clean packaging
+Covers the full progression: Fundamentals → ON/OFF → Mathematical Model → P → PI → PID → Disturbances → Metrics & Visualization.
 
 ## Features
 
-- Physics-based room thermal model (first-order lag)
-- Controllers implemented from scratch: ON/OFF, P, PI, PID
-- Realistic disturbances (outdoor temperature variation, door openings, occupancy)
-- Performance metrics: rise time, overshoot, settling time, steady-state error, energy consumption
-- Side-by-side comparison of all controllers
+- Physics-based first-order room thermal model
+- Controllers from scratch: ON/OFF (hysteresis), P, PI (anti-windup), PID (anti-windup + derivative filter)
+- Realistic disturbances (outdoor variation, door openings, occupancy)
+- Rich performance metrics + CSV export
+- High-quality comparison plots
+- Configurable via `config.py`
+- Optional Streamlit live dashboard
 - Clean modular architecture
-- Ready for extension to MPC or RL later
 
 ## Quick Start
 
@@ -29,100 +21,50 @@ This project covers the full progression:
 git clone https://github.com/Helloworldceo/smart-hvac-control-system.git
 cd smart-hvac-control-system
 python -m venv .venv
-source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Run the full comparison
+# Full comparison (plots + metrics + CSV)
 python -m src.main
+
+# Optional interactive dashboard
+streamlit run src/dashboard.py
 ```
 
-Plots and metrics will be saved in `results/`.
+Results appear in `results/` (PNG plots + `metrics.csv`).
 
 ## Project Structure
 
 ```
 src/
-├── plant.py              # Room thermal model
-├── controllers/
-│   ├── base.py
-│   ├── on_off.py
-│   ├── proportional.py
-│   ├── pi.py
-│   └── pid.py
-├── simulation.py         # Simulation engine + disturbances
-├── metrics.py            # Rise time, overshoot, settling, SSE, energy
-├── plotting.py           # Visualization helpers
-└── main.py               # Run all experiments
-
+├── config.py              # All tunable parameters
+├── plant.py               # Room thermal model
+├── controllers/           # ON/OFF, P, PI, PID
+├── simulation.py          # Engine + disturbances
+├── metrics.py             # Rise/settling/overshoot/SSE/energy
+├── plotting.py            # Visualization
+├── dashboard.py           # Streamlit UI (optional)
+└── main.py
 docs/
-├── mathematical_model.md
-├── controllers.md
-└── results_interpretation.md
-
-experiments/
 results/
 ```
 
-## Mathematical Model (Room)
-
-We use a simple but realistic first-order model:
+## Mathematical Model
 
 ```
 C * dT/dt = (T_out - T)/R + P_heater + P_disturbance
 ```
 
-Where:
-- `T` = room temperature (°C)
-- `T_out` = outdoor temperature (°C)
-- `R` = thermal resistance (°C/W)
-- `C` = thermal capacitance (J/°C)
-- `P_heater` = heater power (W)
-- `P_disturbance` = additional heat gains/losses
-
-This is discretized with a fixed time step for simulation.
+Discretized with forward Euler. Time constant τ = R·C.
 
 ## Controllers
 
-### ON/OFF
-Classic bang-bang with hysteresis option.
-
-### Proportional (P)
-```
-u(t) = Kp * e(t)
-```
-
-### PI
-```
-u(t) = Kp * e(t) + Ki * ∫e(τ)dτ
-```
-
-### PID (from scratch)
-```
-u(t) = Kp * e(t) + Ki * ∫e(τ)dτ + Kd * de/dt
-```
-
-Anti-windup and derivative filtering are included in the PID implementation.
-
-## Performance Metrics
-
-For every controller we compute:
-
-- Rise time (10% → 90%)
-- Overshoot (%)
-- Settling time (±2% band)
-- Steady-state error
-- Total energy consumed by the heater
-
-## Example Results
-
-After running `python -m src.main` you will see comparison plots and a metrics table in the terminal and in `results/`.
-
-## Requirements
-
-- Python ≥ 3.10
-- numpy
-- matplotlib
-- pandas (optional, for nice tables)
+| Controller | Equation | Notes |
+|------------|----------|-------|
+| ON/OFF | bang-bang + hysteresis | Oscillates, simple |
+| P | u = Kp·e | Steady-state error remains |
+| PI | + Ki·∫e | Eliminates SSE, anti-windup |
+| PID | + Kd·de/dt | Damping + filtered derivative |
 
 ## License
 

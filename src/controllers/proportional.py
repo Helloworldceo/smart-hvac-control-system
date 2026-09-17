@@ -1,8 +1,5 @@
-"""Pure Proportional controller."""
-
 from .base import Controller
 import numpy as np
-
 
 class ProportionalController(Controller):
     def __init__(self, Kp: float = 1.0, u_min: float = 0.0, u_max: float = 1.0):
@@ -12,8 +9,4 @@ class ProportionalController(Controller):
 
     def compute(self, measurement: float, setpoint: float, dt: float = 1.0) -> float:
         error = setpoint - measurement
-        u = self.Kp * error
-        return float(np.clip(u, self.u_min, self.u_max))
-
-    def reset(self):
-        pass
+        return float(np.clip(self.Kp * error, self.u_min, self.u_max))

@@ -1,4 +1,4 @@
-"""Performance metrics for control experiments."""
+"""Performance metrics."""
 
 from __future__ import annotations
 import numpy as np
@@ -8,61 +8,56 @@ from .simulation import SimulationResult
 
 @dataclass
 class Metrics:
-    rise_time: float          # seconds (10% → 90%)
-    overshoot: float          # percent
-    settling_time: float      # seconds (±2% band)
-    steady_state_error: float # °C (last 5 minutes average)
+    name: str
+    rise_time: float
+    overshoot: float
+    settling_time: float
+    steady_state_error: float
     energy_kwh: float
-    name: str = ""
+    iae: float          # Integral Absolute Error
+    max_error: float
 
 
 def compute_metrics(result: SimulationResult, name: str = "") -> Metrics:
     t = result.time
     y = result.temperature
     sp = result.setpoint[0]
+    dt = t[1] - t[0] if len(t) > 1 else 1.0
 
-    # Normalize for step response metrics
     y0 = y[0]
-    y_final = np.mean(y[-int(300 / (t[1] - t[0])) :])  # last ~5 min
+    y_final = np.mean(y[-int(300 / dt):]) if len(y) > 10 else y[-1]
 
     # Rise time 10% → 90%
     target_10 = y0 + 0.1 * (sp - y0)
     target_90 = y0 + 0.9 * (sp - y0)
-
     try:
         t10 = t[np.where(y >= target_10)[0][0]]
         t90 = t[np.where(y >= target_90)[0][0]]
-        rise_time = t90 - t10
+        rise_time = float(t90 - t10)
     except IndexError:
-        rise_time = np.nan
+        rise_time = float("nan")
 
-    # Overshoot
     peak = np.max(y)
-    overshoot = max(0.0, (peak - sp) / (sp - y0) * 100) if (sp - y0) != 0 else 0.0
+    overshoot = max(0.0, (peak - sp) / max(abs(sp - y0), 1e-6) * 100)
 
-    # Settling time (±2%)
     band = 0.02 * abs(sp - y0)
     settled = np.abs(y - sp) <= band
-    # Find last time it entered the band and stayed
-    settling_time = np.nan
+    settling_time = float("nan")
     for i in range(len(y) - 1, -1, -1):
         if not settled[i]:
             if i + 1 < len(t):
-                settling_time = t[i + 1]
+                settling_time = float(t[i + 1])
             break
     else:
-        settling_time = t[0]
+        settling_time = float(t[0])
 
-    # Steady-state error
     sse = abs(sp - y_final)
-
-    energy_kwh = result.energy / 3.6e6  # J → kWh
+    iae = float(np.sum(np.abs(result.error)) * dt)
+    max_error = float(np.max(np.abs(result.error)))
+    energy_kwh = result.energy / 3.6e6
 
     return Metrics(
-        rise_time=float(rise_time),
-        overshoot=float(overshoot),
-        settling_time=float(settling_time),
-        steady_state_error=float(sse),
-        energy_kwh=float(energy_kwh),
-        name=name,
+        name=name, rise_time=rise_time, overshoot=overshoot,
+        settling_time=settling_time, steady_state_error=sse,
+        energy_kwh=energy_kwh, iae=iae, max_error=max_error,
     )

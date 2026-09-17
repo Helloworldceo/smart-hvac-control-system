@@ -1,12 +1,11 @@
-"""Simulation engine with optional disturbances."""
+"""Simulation engine with realistic disturbances."""
 
 from __future__ import annotations
 import numpy as np
 from dataclasses import dataclass, field
-from typing import Callable
-
 from .plant import Room
 from .controllers.base import Controller
+from .config import PLANT, SIM
 
 
 @dataclass
@@ -18,29 +17,23 @@ class SimulationResult:
     outdoor: np.ndarray
     energy: float
     disturbance: np.ndarray = field(default_factory=lambda: np.array([]))
+    error: np.ndarray = field(default_factory=lambda: np.array([]))
 
 
 def run_simulation(
     controller: Controller,
-    duration: float = 3600.0,          # seconds
-    dt: float = 1.0,
-    setpoint: float = 22.0,
-    T_init: float = 16.0,
-    T_out_base: float = 5.0,
-    enable_disturbances: bool = True,
-    seed: int | None = 42,
+    duration: float = SIM.duration,
+    dt: float = PLANT.dt,
+    setpoint: float = SIM.setpoint,
+    T_init: float = PLANT.T_init,
+    T_out_base: float = PLANT.T_out_base,
+    enable_disturbances: bool = SIM.enable_disturbances,
+    seed: int | None = SIM.seed,
 ) -> SimulationResult:
-    """
-    Run a closed-loop simulation.
-
-    Disturbances (when enabled):
-    - Slow outdoor temperature variation (sinusoidal + noise)
-    - Occasional door-opening events (negative heat pulses)
-    - Random occupancy heat gains
-    """
     rng = np.random.default_rng(seed)
-
-    room = Room(T_init=T_init, T_out=T_out_base, dt=dt)
+    room = Room()
+    room.T = T_init
+    room.T_out = T_out_base
     controller.reset()
 
     n_steps = int(duration / dt)
@@ -50,18 +43,15 @@ def run_simulation(
     control = np.zeros(n_steps)
     outdoor = np.zeros(n_steps)
     disturbance = np.zeros(n_steps)
+    error = np.zeros(n_steps)
 
     for i in range(n_steps):
         t = i * dt
         time[i] = t
 
-        # Outdoor temperature variation
         if enable_disturbances:
-            # Daily-ish sinusoid + noise (scaled for 1-hour demo)
             T_out = T_out_base + 3.0 * np.sin(2 * np.pi * t / 3600) + rng.normal(0, 0.3)
-            # Door openings: short negative pulses
             door = -800.0 if (800 < t < 860) or (2000 < t < 2050) else 0.0
-            # Occupancy heat gain
             occ = 150.0 if 1200 < t < 2800 else 0.0
             dist = door + occ + rng.normal(0, 20)
         else:
@@ -72,19 +62,12 @@ def run_simulation(
         outdoor[i] = T_out
         disturbance[i] = dist
 
-        # Controller
         u = controller.compute(room.T, setpoint, dt)
         control[i] = u
-
-        # Plant step
+        error[i] = setpoint - room.T
         temperature[i] = room.step(u, disturbance_power=dist)
 
     return SimulationResult(
-        time=time,
-        temperature=temperature,
-        setpoint=sp,
-        control=control,
-        outdoor=outdoor,
-        energy=room.energy_consumed,
-        disturbance=disturbance,
+        time=time, temperature=temperature, setpoint=sp, control=control,
+        outdoor=outdoor, energy=room.energy_consumed, disturbance=disturbance, error=error,
     )
